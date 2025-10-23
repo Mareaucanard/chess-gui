@@ -1,0 +1,6 @@
+.vscode
+*.o
+*.d
+stockfish-*
+.editorconfig
+chess_gui.x86-64

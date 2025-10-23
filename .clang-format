@@ -1,0 +1,32 @@
+Language: Cpp
+
+ColumnLimit: 149 # You need to do +1 for some reason
+IndentWidth: 4
+ContinuationIndentWidth: 4
+
+BreakBeforeBinaryOperators: NonAssignment
+KeepEmptyLinesAtTheStartOfBlocks: false
+AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakAfterReturnType: AllDefinitions
+
+IncludeBlocks: Regroup # Group and separate categories
+IncludeCategories:
+  # Put <> includes first
+  - Regex: '<*>'
+    Priority: 1
+  # Put "" includes second
+  - Regex: '"*"'
+    Priority: 2
+
+AlwaysBreakAfterReturnType: AllDefinitions
+AccessModifierOffset: -4
+AlignAfterOpenBracket: AlwaysBreak
+
+IndentPPDirectives: BeforeHash
+MaxEmptyLinesToKeep: 1
+
+BreakBeforeBraces: Linux
+AlwaysBreakAfterReturnType: None
+PenaltyReturnTypeOnItsOwnLine: 99999
+IndentPPDirectives: BeforeHash
+AllowShortFunctionsOnASingleLine: InlineOnly
