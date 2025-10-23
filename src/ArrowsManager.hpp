@@ -6,10 +6,14 @@
 class Arrow
 {
 public:
-    Arrow(int start, int end, sf::RectangleShape line);
+    Arrow(int start, int end, Chess::Board &origin);
     sf::RectangleShape shape;
+    sf::CircleShape triangle;
     int start_pos;
     int end_pos;
+    static sf::RectangleShape make_line_from_coordinates(sf::Vector2i start, sf::Vector2i end, float width);
+    static sf::CircleShape make_triangle_from_coordinates(sf::Vector2i start, sf::Vector2i end, float width);
+    static float get_effective_angle(const sf::Vector2i start_pos, const sf::Vector2i end_pos);
 };
 
 class ArrowsManager
@@ -17,7 +21,6 @@ class ArrowsManager
 public:
     std::vector<Arrow> arrows_list;
 
-    sf::RectangleShape make_line_from_coordinates(sf::Vector2i start, sf::Vector2i end, float width);
     sf::RectangleShape mouse_arrow;
     bool mouse_arrow_enabled = false;
 
