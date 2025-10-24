@@ -16,11 +16,7 @@ public:
     bool is_white = true;
     piece_type type = Pawn;
     int indexed_position = 0;
-    sf::Sprite sprite;
-
-    void update_ressources(RessourceManager &manager);
-    void update_sprite_position(sf::Vector2<float> board_origin, int square_size);
-    void scale_piece(int square_size);
+    char print_piece();
 
     Piece();
     Piece(bool is_white, piece_type type, int indexed_position);

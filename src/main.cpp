@@ -37,15 +37,13 @@ int graphics_loop(Chess::Board &board, argparse::ArgumentParser &program)
 {
     sf::RenderWindow window(sf::VideoMode(1280, 720), "Chess GUI");
     RessourceManager manager(program.get<std::string>("--pieces"));
-    board.setup_textures(program.get<std::string>("--board"), manager);
+    board.setup_textures(program.get<std::string>("--board"), &manager);
     board.resize_board(1280, 720);
     board.scale_pieces();
     board.scale_board();
 
     ArrowsManager arrowsManager;
     int right_click_pos = -1;
-    arrowsManager.add_arrow(0, 3, board);
-    arrowsManager.add_arrow(8, 42, board);
 
     window.setFramerateLimit(60);
     while (window.isOpen()) {
@@ -92,6 +90,14 @@ int graphics_loop(Chess::Board &board, argparse::ArgumentParser &program)
                 window.setView(sf::View(visibleArea));
                 arrowsManager.resize_arrows(board);
             }
+            if (event.type == sf::Event::KeyPressed) {
+                if (event.key.code == sf::Keyboard::R) {
+                    board.load_from_FEN(Chess::default_FEN);
+                }
+                if (event.key.code == sf::Keyboard::S) {
+                    std::cout << board.get_square_from_mouse(sf::Mouse::getPosition(window)) << std::endl;
+                }
+            }
         }
 
         window.clear();
@@ -113,8 +119,8 @@ Chess::Board setup_board(argparse::ArgumentParser &program)
     Chess::Board board;
 
     std::string FEN = program.get<std::string>("--FEN");
-    board.load_from_FEN(FEN);
     board.log_FEN = program.get<bool>("--log_FEN");
+    board.load_from_FEN(FEN);
     return board;
 }
 

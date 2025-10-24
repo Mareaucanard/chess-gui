@@ -14,8 +14,23 @@ struct Move {
     int start_pos;
     int end_pos;
 
+    static std::string to_string(int pos);
     inline Move(int spos, int epos) : start_pos(spos), end_pos(epos) {}
     bool operator==(const Move &other) const;
+};
+struct MoveLog {
+    inline MoveLog(Move move, Piece piece, bool isCapture, bool isCheck, bool isMate)
+        : move(move), piece(piece), isCapture(isCapture), isCheck(isCheck), isMate(isMate)
+    {
+    }
+
+    Move move;
+    Piece piece;
+    bool isCapture;
+    bool isCheck;
+    bool isMate;
+
+    std::string print_move();
 };
 
 std::ostream &operator<<(std::ostream &os, Move move);
@@ -29,20 +44,27 @@ public:
     sf::Texture texture;
     RessourceManager *manager = nullptr;
     std::vector<Move> legal_moves;
+    std::vector<sf::Sprite> sprites;
 
     Board();
 
     void play_move(Move move);
     void check_if_move_voids_castle(Move move, Piece &moving_piece);
 
-    void setup_textures(std::filesystem::path path, RessourceManager &manager);
+    void setup_textures(std::filesystem::path path, RessourceManager *manager);
     void setup_board_textures(std::filesystem::path path);
-    void setup_pieces_textures(RessourceManager &manager);
+    void setup_pieces_textures();
 
     void update_sprite_position(sf::RectangleShape &shape, sf::Vector2f &board_origin, int index);
     static std::string get_clean_coordinate(char pos);
 
+    bool load_from_FEN_board(std::string fen_board);
+    bool load_from_FEN_color(std::string fen_color);
+    bool load_from_FEN_castle(std::string fen_castle);
+    bool load_from_FEN_half_move(std::string fen_half_move);
+    bool load_from_FEN_full_move(std::string fen_full_move);
     bool load_from_FEN(std::string FEN);
+
     std::string get_FEN();
     void print_all_legal_moves();
     int get_square_from_mouse(sf::Vector2i local_position);
@@ -51,6 +73,10 @@ public:
     void scale_board();
 
     void add_piece(bool is_white, Piece::piece_type type, int indexed_pos);
+
+    bool is_square_safe(int square, bool cur_is_white);
+    bool is_king_safe(bool is_white);
+    void show_last_move();
 
     std::vector<Move> get_all_legal_moves(bool is_mover_white);
     void add_sliding_moves(Piece &piece, std::vector<Move> &moves);
@@ -72,7 +98,7 @@ public:
     sf::RectangleShape highlighted_square_shape;
     sf::RectangleShape main_highlighted_square_shape;
 
-    int direction_offsets[8] = {8, -8, -1, 1, 7, -7, 9, -9};
+    int direction_offsets[8] = {8, -8, -1, 1, 7, -7, 9, -9}; // Goes up down left right up-left down-left up-right down-right
     int distance_to_borders[64][8];
     void precompute_distance_to_borders();
 
@@ -88,7 +114,8 @@ public:
     int fullmove_number = 1;
 
     bool log_FEN = false;
+    bool is_mini_board = false;
 
-    std::vector<Move> move_list;
+    std::vector<MoveLog> move_list;
 };
 } // namespace Chess
