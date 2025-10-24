@@ -13,11 +13,9 @@ SRC 			=	src/main.cpp \
 					src/chess/piece.cpp \
 					src/chess/board.cpp \
 					src/ArrowsManager.cpp \
+					src/chess/MoveLog.cpp	\
 
-INCLUDES 		=	-Iinclude -Isrc -Isrc/Pin -Isrc/Components 				\
-					-Isrc/Components/Basic -Isrc/Components/InputOutput 	\
-					-Isrc/Components/MultiGate -Isrc/Components/Advanced	\
-					-Isrc/Components/Advanced/FlipFlops
+INCLUDES 		=	-Iinclude -Isrc
 
 CXXFLAGS 		= 	$(INCLUDES) -Wall -Wextra -Wpedantic -std=c++23 -g3 -Wno-narrowing
 

@@ -4,3 +4,6 @@
 stockfish-*
 .editorconfig
 chess_gui.x86-64
+game.PGN
+a.out
+test.cpp

@@ -12,10 +12,21 @@ Board::Board()
     precompute_distance_to_borders();
 }
 
+void Chess::Board::move_piece(Move move)
+{
+    full_board[move.end_pos] = full_board[move.start_pos];
+    full_board[move.end_pos].indexed_position = move.end_pos;
+    full_board[move.start_pos] = Piece();
+}
+
 void Board::play_move(Move move)
 {
     bool is_capture = full_board[move.end_pos].type != Piece::NONE;
     auto &moving_piece = full_board[move.start_pos];
+
+    move_history->move = move;
+    move_history->piece = moving_piece;
+    move_history->isCapture = is_capture;
 
     if (is_capture || moving_piece.type == Piece::Pawn) {
         halfmove_clock = 0;
@@ -29,7 +40,7 @@ void Board::play_move(Move move)
 
     // Check for en passant to capture pawn
     if (moving_piece.type == Piece::Pawn && move.end_pos == en_passant_square) {
-        is_capture = true;
+        move_history->isCapture = true;
         if (moving_piece.is_white) {
             full_board[move.end_pos - 8] = Piece();
         } else {
@@ -41,25 +52,21 @@ void Board::play_move(Move move)
     if (moving_piece.type == Piece::King) {
         if (moving_piece.is_white) {
             if (move.start_pos == 4 && move.end_pos == 6) {
-                full_board[5] = full_board[7];
-                full_board[5].indexed_position = 5;
-                full_board[7] = Piece();
+                move_piece(Move(7, 5));
+                move_history->isCastle = true;
             }
             if (move.start_pos == 4 && move.end_pos == 2) {
-                full_board[3] = full_board[0];
-                full_board[3].indexed_position = 3;
-                full_board[0] = Piece();
+                move_piece(Move(0, 3));
+                move_history->isCastle = true;
             }
         } else {
             if (move.start_pos == 60 && move.end_pos == 62) {
-                full_board[61] = full_board[63];
-                full_board[61].indexed_position = 61;
-                full_board[63] = Piece();
+                move_piece(Move(63, 61));
+                move_history->isCastle = true;
             }
             if (move.start_pos == 60 && move.end_pos == 58) {
-                full_board[59] = full_board[56];
-                full_board[59].indexed_position = 59;
-                full_board[56] = Piece();
+                move_piece(Move(56, 59));
+                move_history->isCastle = true;
             }
         }
     }
@@ -78,9 +85,21 @@ void Board::play_move(Move move)
         check_if_move_voids_castle(move, moving_piece);
     }
 
-    full_board[move.end_pos] = full_board[move.start_pos];
-    full_board[move.end_pos].indexed_position = move.end_pos;
-    full_board[move.start_pos] = Piece();
+    for (auto &potential_move : legal_moves) {
+        if (potential_move.start_pos == move.start_pos) {
+            continue;
+        }
+        auto potential_piece = full_board[potential_move.start_pos];
+        if (potential_move.end_pos == move.end_pos && potential_piece.type == moving_piece.type) {
+            if (move.start_pos % 8 == potential_move.start_pos % 8) { // If there is a matching file, show the rank
+                move_history->showRank = true;
+            } else { // If there is not matching file, show the file (if nothing matches priority for the file)
+                move_history->showFile = true;
+            }
+        }
+    }
+
+    move_piece(move);
 
     bool is_check = !is_king_safe(!is_white_turn);
 
@@ -91,7 +110,11 @@ void Board::play_move(Move move)
     }
     if (!is_mini_board) {
         this->legal_moves = get_all_legal_moves(is_white_turn);
-        move_list.push_back(MoveLog(move, piece_copy, is_capture, is_check, is_check && legal_moves.size() == 0));
+        move_history->isCheck = is_check;
+        move_history->isMate = is_check && legal_moves.size() == 0;
+        move_history->fen = get_FEN();
+        move_history->isDraw == !is_check && legal_moves.size() == 0;
+        move_history.push_move();
         show_last_move();
     }
 }
@@ -102,7 +125,6 @@ void Board::check_if_move_voids_castle(Move move, Piece &moving_piece)
 
     if (moving_piece.type == Piece::King) {
         if (is_white_turn) {
-            std::cout << "King moved so no castle" << std::endl;
             king_white_castle = false;
             queen_white_castle = false;
         } else {
@@ -311,7 +333,6 @@ bool Board::load_from_FEN(std::string FEN)
         return false;
     }
 
-    move_list.clear();
     if (log_FEN) {
         std::cout << get_FEN() << std::endl;
     }
@@ -489,7 +510,7 @@ bool Chess::Board::is_king_safe(bool cur_is_white)
 
 void Chess::Board::show_last_move()
 {
-    auto &last_move = move_list.back();
+    auto &last_move = move_history.move_history.back();
     std::cout << last_move.print_move() << std::endl;
 }
 
@@ -798,20 +819,4 @@ std::string Chess::Move::to_string(int pos)
 bool Chess::Move::operator==(const Move &other) const
 {
     return start_pos == other.start_pos && end_pos == other.end_pos;
-}
-
-std::string Chess::MoveLog::print_move()
-{
-    std::string res = "";
-    res += this->piece.print_piece();
-    if (isCapture) {
-        res += "x";
-    }
-    res += Move::to_string(move.end_pos);
-    if (isMate) {
-        res += "#";
-    } else if (isCheck) {
-        res += "+";
-    }
-    return res;
 }

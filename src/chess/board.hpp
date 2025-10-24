@@ -7,32 +7,10 @@
 #include <iostream>
 #include <vector>
 
+#include "MoveLog.hpp"
+
 namespace Chess
 {
-const char default_FEN[57] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-struct Move {
-    int start_pos;
-    int end_pos;
-
-    static std::string to_string(int pos);
-    inline Move(int spos, int epos) : start_pos(spos), end_pos(epos) {}
-    bool operator==(const Move &other) const;
-};
-struct MoveLog {
-    inline MoveLog(Move move, Piece piece, bool isCapture, bool isCheck, bool isMate)
-        : move(move), piece(piece), isCapture(isCapture), isCheck(isCheck), isMate(isMate)
-    {
-    }
-
-    Move move;
-    Piece piece;
-    bool isCapture;
-    bool isCheck;
-    bool isMate;
-
-    std::string print_move();
-};
-
 std::ostream &operator<<(std::ostream &os, Move move);
 
 class Board
@@ -43,11 +21,13 @@ public:
     sf::Sprite sprite;
     sf::Texture texture;
     RessourceManager *manager = nullptr;
+    MoveLog move_history;
     std::vector<Move> legal_moves;
     std::vector<sf::Sprite> sprites;
 
     Board();
 
+    void move_piece(Move move);
     void play_move(Move move);
     void check_if_move_voids_castle(Move move, Piece &moving_piece);
 
@@ -115,7 +95,5 @@ public:
 
     bool log_FEN = false;
     bool is_mini_board = false;
-
-    std::vector<MoveLog> move_list;
 };
 } // namespace Chess

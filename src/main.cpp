@@ -97,6 +97,19 @@ int graphics_loop(Chess::Board &board, argparse::ArgumentParser &program)
                 if (event.key.code == sf::Keyboard::S) {
                     std::cout << board.get_square_from_mouse(sf::Mouse::getPosition(window)) << std::endl;
                 }
+                if (event.key.code == sf::Keyboard::P) {
+                    board.move_history.write_PGN("./game.PGN");
+                }
+                if (event.key.code == sf::Keyboard::Left) {
+                    if (board.move_history.undo()) {
+                        board.load_from_FEN(board.move_history.get_active_fen());
+                    }
+                }
+                if (event.key.code == sf::Keyboard::Right) {
+                    if (board.move_history.redoo()) {
+                        board.load_from_FEN(board.move_history.get_active_fen());
+                    }
+                }
             }
         }
 
