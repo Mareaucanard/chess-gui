@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <set>
 #include <stdexcept>
 
 using namespace Chess;
@@ -12,11 +13,19 @@ Board::Board()
     precompute_distance_to_borders();
 }
 
+Chess::Board::~Board()
+{
+    free(this->promotion_popup);
+}
+
 void Chess::Board::move_piece(Move move)
 {
     full_board[move.end_pos] = full_board[move.start_pos];
     full_board[move.end_pos].indexed_position = move.end_pos;
     full_board[move.start_pos] = Piece();
+    if (move.promotion != Piece::piece_type::NONE) {
+        full_board[move.end_pos].type = move.promotion;
+    }
 }
 
 void Board::play_move(Move move)
@@ -80,7 +89,6 @@ void Board::play_move(Move move)
         }
     }
 
-    Piece piece_copy(moving_piece);
     if (!is_mini_board) {
         check_if_move_voids_castle(move, moving_piece);
     }
@@ -113,7 +121,7 @@ void Board::play_move(Move move)
         move_history->isCheck = is_check;
         move_history->isMate = is_check && legal_moves.size() == 0;
         move_history->fen = get_FEN();
-        move_history->isDraw == !is_check && legal_moves.size() == 0;
+        move_history->isDraw = !is_check && legal_moves.size() == 0;
         move_history.push_move();
         show_last_move();
     }
@@ -177,6 +185,7 @@ void Board::check_if_move_voids_castle(Move move, Piece &moving_piece)
 void Board::setup_textures(std::filesystem::path path, RessourceManager *manager)
 {
     this->manager = manager;
+    this->promotion_popup = new PromotionPopup();
     setup_board_textures(path);
 }
 
@@ -451,7 +460,7 @@ std::string Board::get_FEN()
     if (en_passant_square == -1) {
         FEN += "-";
     } else {
-        FEN += get_clean_coordinate(en_passant_square);
+        FEN += Move::get_clean_coordinate(en_passant_square);
     }
     FEN = FEN + " " + std::to_string(halfmove_clock) + " " + std::to_string(fullmove_number);
 
@@ -483,6 +492,7 @@ void Chess::Board::resize_board(unsigned width, unsigned height)
     square_size = std::min(width, height) / 8;
     scale_board();
     scale_pieces();
+    this->promotion_popup->scale(*this);
 }
 
 void Chess::Board::scale_board()
@@ -623,6 +633,21 @@ bool is_inside_board(int square)
 
 void Board::add_pawn_moves(Piece &piece, std::vector<Move> &moves)
 {
+    auto push_pawn_move = [&](Move move) {
+        if (move.end_pos / 8 == (is_white_turn ? 7 : 0)) {
+            move.promotion = Piece::piece_type::Queen;
+            moves.push_back(move);
+            move.promotion = Piece::piece_type::Rook;
+            moves.push_back(move);
+            move.promotion = Piece::piece_type::Bishop;
+            moves.push_back(move);
+            move.promotion = Piece::piece_type::Knight;
+            moves.push_back(move);
+        } else {
+            moves.push_back(move);
+        }
+    };
+
     int y = piece.indexed_position / 8;
     int x = piece.indexed_position % 8;
     int forward = piece.is_white ? +8 : -8;
@@ -631,7 +656,7 @@ void Board::add_pawn_moves(Piece &piece, std::vector<Move> &moves)
 
     int target_square = piece.indexed_position + forward;
     if (is_inside_board(target_square) && !full_board[target_square]) {
-        moves.push_back(Move(piece.indexed_position, target_square));
+        push_pawn_move(Move(piece.indexed_position, target_square));
         target_square = piece.indexed_position + forward * 2;
         if (is_first_move && is_inside_board(target_square) && !full_board[target_square]) {
             moves.push_back(Move(piece.indexed_position, target_square));
@@ -648,12 +673,12 @@ void Board::add_pawn_moves(Piece &piece, std::vector<Move> &moves)
     // Check for captures
     target_square = piece.indexed_position + forward + 1;
     if (x != 7 && (is_mini_board || is_square_capturable(target_square))) {
-        moves.push_back(Move(piece.indexed_position, target_square));
+        push_pawn_move(Move(piece.indexed_position, target_square));
     }
 
     target_square = piece.indexed_position + forward - 1;
     if (x != 0 && (is_mini_board || is_square_capturable(target_square))) {
-        moves.push_back(Move(piece.indexed_position, target_square));
+        push_pawn_move(Move(piece.indexed_position, target_square));
     }
 }
 
@@ -782,7 +807,11 @@ void Board::draw_board(sf::RenderWindow &window)
     if (selected_piece != -1) {
         update_sprite_position(main_highlighted_square_shape, origin, selected_piece);
         window.draw(main_highlighted_square_shape);
-        for (auto square : moves_for_selected_piece) {
+        std::set<int> tmp_set;
+        for (auto s : moves_for_selected_piece) {
+            tmp_set.insert(s);
+        }
+        for (auto square : tmp_set) {
             update_sprite_position(highlighted_square_shape, origin, square);
             window.draw(highlighted_square_shape);
         }
@@ -805,6 +834,7 @@ void Board::draw_board(sf::RenderWindow &window)
         }
         window.draw(sprite);
     }
+    promotion_popup->draw(window, *this);
 }
 
 void Board::precompute_distance_to_borders()
@@ -830,18 +860,12 @@ void Board::precompute_distance_to_borders()
     }
 }
 
-std::string Board::get_clean_coordinate(char pos)
+std::string Move::get_clean_coordinate(char pos)
 {
     char x = pos % 8;
     char y = pos / 8;
 
     return std::string(1, 'a' + x) + std::string(1, '1' + y);
-}
-
-std::ostream &Chess::operator<<(std::ostream &os, Move move)
-{
-    os << Board::get_clean_coordinate(move.start_pos) << Board::get_clean_coordinate(move.end_pos);
-    return os;
 }
 
 std::string Chess::Move::to_string(int pos)
@@ -858,4 +882,58 @@ std::string Chess::Move::to_string(int pos)
 bool Chess::Move::operator==(const Move &other) const
 {
     return start_pos == other.start_pos && end_pos == other.end_pos;
+}
+
+Chess::PromotionPopup::PromotionPopup()
+{
+    this->square.setFillColor(sf::Color(127, 127, 127, 255));
+}
+
+void Chess::PromotionPopup::show(Move move)
+{
+    visible = true;
+    this->move = move;
+    is_direction_up = this->move.end_pos / 8 == 0;
+}
+
+void Chess::PromotionPopup::draw(sf::RenderWindow &window, Board &board)
+{
+    if (!visible) {
+        return;
+    }
+
+    auto origin = board.get_origin();
+    for (int i = 0; i < 4; i++) {
+        int index = move.end_pos + 8 * i * (is_direction_up ? 1 : -1);
+        int x = index % 8;
+        int y = index / 8;
+
+        float true_x = origin.x + board.square_size * x;
+        float true_y = origin.y - board.square_size * (1 + y);
+
+        square.setRadius(board.square_size / 2);
+        square.setPosition({true_x, true_y});
+
+        window.draw(square);
+        int texture_index = Piece::get_texture_index(promotion_order[i], !is_direction_up);
+        auto &sprite = board.manager->sprite_piece_array[texture_index];
+        sprite.setPosition(square.getPosition());
+        window.draw(sprite);
+    }
+}
+
+void Chess::PromotionPopup::scale(Board &board)
+{
+}
+
+Piece::piece_type Chess::PromotionPopup::select(int square)
+{
+    visible = false;
+    for (int i = 0; i < 4; i++) {
+        int target_square = move.end_pos + 8 * i * (is_direction_up ? 1 : -1);
+        if (square == target_square) {
+            return promotion_order[i];
+        }
+    }
+    return Piece::piece_type::NONE;
 }

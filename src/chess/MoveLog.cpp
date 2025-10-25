@@ -9,10 +9,11 @@ MoveLog::MoveLog()
     init_new_move();
 }
 
-void MoveLog::reset()
+void MoveLog::reset(std::string FEN)
 {
     move_history.clear();
     ply_index = -1;
+    starting_FEN = FEN;
     init_new_move();
 }
 
@@ -77,6 +78,7 @@ void MoveLog::write_PGN(path file_path)
     int move_counter = 1;
     if (move_history.front().piece.is_white == false) {
         PGN_file << "1... ";
+        move_counter += 1;
     }
     for (auto &move : move_history) {
         if (move.piece.is_white) {
@@ -109,7 +111,7 @@ std::string LogInstance::print_move()
     if (c != 0) {
         res += c;
     }
-    if (showFile) {
+    if (showFile || (this->piece.type == Piece::Pawn && isCapture)) {
         res += 'a' + move.start_pos % 8;
     }
     if (showRank) {
@@ -119,12 +121,27 @@ std::string LogInstance::print_move()
         res += "x";
     }
     res += Move::to_string(move.end_pos);
+    if (move.promotion != Piece::piece_type::NONE) {
+        res += '=';
+        res += Piece::print_piece(move.promotion, true);
+    }
+
     if (isMate) {
         res += "#";
     } else if (isCheck) {
         res += "+";
     }
+
     return res;
+}
+
+std::ostream &operator<<(std::ostream &os, Move move)
+{
+    os << Move::get_clean_coordinate(move.start_pos) << Move::get_clean_coordinate(move.end_pos);
+    if (move.promotion != Piece::piece_type::NONE) {
+        os << Piece::print_piece(move.promotion, false);
+    }
+    return os;
 }
 
 } // namespace Chess

@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Vector2.hpp>
+#include <algorithm>
 #include <argparse/argparse.hpp>
 #include <cmath>
 #include <iostream>
@@ -9,26 +10,45 @@
 #include "chess/piece.hpp"
 #include "ressourceManager.hpp"
 
-void on_left_mouse_clicked(Chess::Board &board, sf::Vector2i position, ArrowsManager &arrows)
+void on_left_mouse_clicked(Chess::Board &board, sf::Vector2i position, ArrowsManager &arrows, bool is_release)
 {
     int pos = board.get_square_from_mouse(position);
     if (pos != -1) {
         arrows.arrows_list.clear();
         bool was_move_played = false;
-        if (board.selected_piece != -1) {
+        if (board.promotion_popup->visible) {
+            was_move_played = true;
+            Chess::Piece::piece_type selection_type = board.promotion_popup->select(pos);
+            if (selection_type != Chess::Piece::NONE) {
+                auto base_move = board.promotion_popup->move;
+                base_move.promotion = selection_type;
+                board.play_move(base_move);
+            } else {
+                board.selected_piece = -1;
+            }
+        } else if (board.selected_piece != -1) {
             auto &vec = board.moves_for_selected_piece;
-            if (std::find(vec.begin(), vec.end(), pos) != vec.end()) {
-                board.play_move(Chess::Move(board.selected_piece, pos));
-                board.display_square_moves(-1);
-                was_move_played = true;
+            auto move_found = std::find(vec.begin(), vec.end(), pos);
+            if (move_found != vec.end()) {
+                if ((std::find(move_found + 1, vec.end(), pos) != vec.end())) { // If promotion
+                    was_move_played = true;
+                    board.promotion_popup->show(Chess::Move(board.selected_piece, pos));
+                    board.selected_piece = -1;
+
+                } else {
+                    board.play_move(Chess::Move(board.selected_piece, pos));
+                    board.display_square_moves(-1);
+                    was_move_played = true;
+                }
             }
         }
 
-        if (!was_move_played) {
-            if (pos != -1) {
-                board.display_square_moves(pos);
-                board.is_piece_picked_up = true;
-            }
+        if (!was_move_played && !is_release) {
+            board.display_square_moves(pos);
+            board.is_piece_picked_up = true;
+        }
+        if (pos == board.selected_piece && is_release) {
+            board.is_piece_picked_up = false;
         }
     }
 }
@@ -53,7 +73,7 @@ int graphics_loop(Chess::Board &board, argparse::ArgumentParser &program)
                 window.close();
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Left) {
-                    on_left_mouse_clicked(board, sf::Mouse::getPosition(window), arrowsManager);
+                    on_left_mouse_clicked(board, sf::Mouse::getPosition(window), arrowsManager, false);
                 } else if (event.mouseButton.button == sf::Mouse::Right) {
                     sf::Vector2i mouse_location = sf::Mouse::getPosition(window);
                     right_click_pos = board.get_square_from_mouse(mouse_location);
@@ -70,17 +90,8 @@ int graphics_loop(Chess::Board &board, argparse::ArgumentParser &program)
                     }
                     arrowsManager.mouse_arrow_enabled = false;
                 } else if (event.mouseButton.button == sf::Mouse::Left) {
-                    int pos = board.get_square_from_mouse(sf::Mouse::getPosition(window));
                     if (board.selected_piece != -1) {
-                        auto &vec = board.moves_for_selected_piece;
-
-                        if (std::find(vec.begin(), vec.end(), pos) != vec.end()) {
-                            board.play_move(Chess::Move(board.selected_piece, pos));
-                            board.display_square_moves(-1);
-                        } else if (pos != board.selected_piece) {
-                            board.display_square_moves(-1);
-                        }
-                        board.is_piece_picked_up = false;
+                        on_left_mouse_clicked(board, sf::Mouse::getPosition(window), arrowsManager, true);
                     }
                 }
             }
@@ -93,12 +104,15 @@ int graphics_loop(Chess::Board &board, argparse::ArgumentParser &program)
             if (event.type == sf::Event::KeyPressed) {
                 if (event.key.code == sf::Keyboard::R) {
                     board.load_from_FEN(Chess::default_FEN);
+                    board.move_history.reset(Chess::default_FEN);
+                    board.selected_piece = -1;
                 }
                 if (event.key.code == sf::Keyboard::S) {
                     std::cout << board.get_square_from_mouse(sf::Mouse::getPosition(window)) << std::endl;
                 }
                 if (event.key.code == sf::Keyboard::P) {
                     board.move_history.write_PGN("./game.PGN");
+                    board.selected_piece = -1;
                 }
                 if (event.key.code == sf::Keyboard::Left) {
                     if (board.move_history.undo()) {
@@ -108,6 +122,7 @@ int graphics_loop(Chess::Board &board, argparse::ArgumentParser &program)
                 if (event.key.code == sf::Keyboard::Right) {
                     if (board.move_history.redoo()) {
                         board.load_from_FEN(board.move_history.get_active_fen());
+                        board.selected_piece = -1;
                     }
                 }
             }
@@ -136,11 +151,10 @@ Chess::Board setup_board(argparse::ArgumentParser &program)
     if (!board.load_from_FEN(FEN)) {
         exit(1);
     }
+    board.move_history.reset(FEN);
     return board;
 }
 
-// TEST FEN r1bnk2r/pppq1ppp/3b1n2/4p1N1/2B5/1QN1P3/PP1P1PPP/R1B2RK1 w kq - 9
-// 10"
 int main(int argc, char **argv)
 {
     argparse::ArgumentParser program("Chess GUI");

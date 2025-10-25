@@ -16,10 +16,12 @@ public:
     bool is_white = true;
     piece_type type = Pawn;
     int indexed_position = 0;
+    static char print_piece(Piece::piece_type, bool is_white);
     char print_piece();
 
     Piece();
     Piece(bool is_white, piece_type type, int indexed_position);
     inline int get_texture_index() { return is_white ? type : type + 6; };
+    inline static int get_texture_index(Piece::piece_type type, bool is_white) { return is_white ? type : type + 6; };
 };
 } // namespace Chess

@@ -11,7 +11,8 @@
 
 namespace Chess
 {
-std::ostream &operator<<(std::ostream &os, Move move);
+
+class PromotionPopup;
 
 class Board
 {
@@ -23,9 +24,9 @@ public:
     RessourceManager *manager = nullptr;
     MoveLog move_history;
     std::vector<Move> legal_moves;
-    std::vector<sf::Sprite> sprites;
 
     Board();
+    ~Board();
 
     void move_piece(Move move);
     void play_move(Move move);
@@ -36,7 +37,6 @@ public:
     void setup_pieces_textures();
 
     void update_sprite_position(sf::RectangleShape &shape, sf::Vector2f &board_origin, int index);
-    static std::string get_clean_coordinate(char pos);
 
     bool load_from_FEN_board(std::string fen_board);
     bool load_from_FEN_color(std::string fen_color);
@@ -96,5 +96,25 @@ public:
 
     bool log_FEN = false;
     bool is_mini_board = false;
+    PromotionPopup *promotion_popup = nullptr;
 };
+
+class PromotionPopup
+{
+public:
+    PromotionPopup();
+    void show(Move move);
+    void draw(sf::RenderWindow &window, Board &board);
+    void scale(Board &board);
+    Piece::piece_type select(int square);
+
+    bool visible = false;
+    Move move;
+
+private:
+    bool is_direction_up;
+    sf::CircleShape square;
+    const Chess::Piece::piece_type promotion_order[4] = {Piece::Queen, Piece::Knight, Piece::Rook, Piece::Bishop};
+};
+
 } // namespace Chess
