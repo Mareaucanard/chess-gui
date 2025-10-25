@@ -41,6 +41,7 @@ public:
     bool load_from_FEN_board(std::string fen_board);
     bool load_from_FEN_color(std::string fen_color);
     bool load_from_FEN_castle(std::string fen_castle);
+    bool load_from_FEN_en_passant(std::string fen_en_passant);
     bool load_from_FEN_half_move(std::string fen_half_move);
     bool load_from_FEN_full_move(std::string fen_full_move);
     bool load_from_FEN(std::string FEN);

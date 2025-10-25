@@ -255,22 +255,22 @@ bool Board::load_from_FEN_color(std::string fen_color)
 bool Board::load_from_FEN_castle(std::string fen_castle)
 {
     king_black_castle = false;
-    king_black_castle = false;
+    king_white_castle = false;
     queen_black_castle = false;
     queen_white_castle = false;
 
     for (auto c : fen_castle) {
         switch (c) {
-        case 'k':
+        case 'K':
             king_white_castle = true;
             break;
-        case 'q':
+        case 'Q':
             queen_white_castle = true;
             break;
-        case 'K':
+        case 'k':
             king_black_castle = true;
             break;
-        case 'Q':
+        case 'q':
             queen_black_castle = true;
             break;
         }
@@ -278,6 +278,26 @@ bool Board::load_from_FEN_castle(std::string fen_castle)
 
     return true;
 }
+
+bool Board::load_from_FEN_en_passant(std::string fen_en_passant)
+{
+    if (fen_en_passant == "-") {
+        en_passant_square = -1;
+        return true;
+    }
+    if (fen_en_passant.size() != 2) {
+        return false;
+    }
+    int file = fen_en_passant[0] - 'a';
+    int rank = fen_en_passant[1] - '1';
+
+    if (file > 7 || file < 0 || rank < 0 || rank > 7) {
+        return false;
+    }
+    en_passant_square = rank * 8 + file;
+    return true;
+}
+
 bool Board::load_from_FEN_half_move(std::string fen_half_move)
 {
     try {
@@ -305,7 +325,9 @@ bool Board::load_from_FEN(std::string FEN)
         full_board[i] = Piece();
     }
 
-    if (std::count(FEN.begin(), FEN.end(), ' ') != 5) {
+    int nb_spaces = std::count(FEN.begin(), FEN.end(), ' ');
+
+    if (nb_spaces > 5 || nb_spaces < 3) {
         std::cerr << "Invalid fen: \"" << FEN << "\"" << std::endl;
         return false;
     }
@@ -327,8 +349,21 @@ bool Board::load_from_FEN(std::string FEN)
     ss >> fen_full_move;
 
     if (load_from_FEN_board(fen_board) && load_from_FEN_color(fen_color) && load_from_FEN_castle(fen_castling)
-        && load_from_FEN_half_move(fen_half_move) && load_from_FEN_full_move(fen_full_move)) {
+        && load_from_FEN_en_passant(fen_en_passant)) {
     } else {
+        std::cerr << "Invalid fen: \"" << FEN << "\"" << std::endl;
+        return false;
+    }
+
+    halfmove_clock = 0;
+    fullmove_number = 0;
+    if (nb_spaces >= 4 && !load_from_FEN_half_move(fen_half_move)) {
+        std::cerr << "Half_move_error" << std::endl;
+        std::cerr << "Invalid fen: \"" << FEN << "\"" << std::endl;
+        return false;
+    }
+    if (nb_spaces >= 5 && !load_from_FEN_full_move(fen_full_move)) {
+        std::cerr << "Full_move_error" << std::endl;
         std::cerr << "Invalid fen: \"" << FEN << "\"" << std::endl;
         return false;
     }
@@ -612,12 +647,12 @@ void Board::add_pawn_moves(Piece &piece, std::vector<Move> &moves)
 
     // Check for captures
     target_square = piece.indexed_position + forward + 1;
-    if (x != 7 && is_square_capturable(target_square)) {
+    if (x != 7 && (is_mini_board || is_square_capturable(target_square))) {
         moves.push_back(Move(piece.indexed_position, target_square));
     }
 
     target_square = piece.indexed_position + forward - 1;
-    if (x != 0 && is_square_capturable(target_square)) {
+    if (x != 0 && (is_mini_board || is_square_capturable(target_square))) {
         moves.push_back(Move(piece.indexed_position, target_square));
     }
 }
@@ -654,6 +689,10 @@ void Chess::Board::add_king_moves(Piece &piece, std::vector<Move> &moves)
     mini_board.is_mini_board = true;
     mini_board.load_from_FEN(get_FEN());
 
+    if (!mini_board.is_king_safe(is_white_turn)) {
+        return;
+    }
+
     auto check_square = [&](int s) { return !full_board[s] && mini_board.is_square_safe(s, is_white_turn); };
     // Castle
     if (is_white_turn) {
@@ -667,7 +706,7 @@ void Chess::Board::add_king_moves(Piece &piece, std::vector<Move> &moves)
         if (king_black_castle && !full_board[62] && check_square(61)) {
             moves.push_back(Move(piece.indexed_position, 62));
         }
-        if (queen_black_castle && !full_board[57] && check_square(58) && !full_board[59]) {
+        if (queen_black_castle && !full_board[57] && check_square(59) && !full_board[58]) {
             moves.push_back(Move(piece.indexed_position, 58));
         }
     }

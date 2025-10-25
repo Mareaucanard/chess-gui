@@ -133,7 +133,9 @@ Chess::Board setup_board(argparse::ArgumentParser &program)
 
     std::string FEN = program.get<std::string>("--FEN");
     board.log_FEN = program.get<bool>("--log_FEN");
-    board.load_from_FEN(FEN);
+    if (!board.load_from_FEN(FEN)) {
+        exit(1);
+    }
     return board;
 }
 

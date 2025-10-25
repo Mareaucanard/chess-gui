@@ -60,7 +60,7 @@ char Chess::Piece::print_piece()
     default:
         return 0;
     }
-    if (!is_white) {
+    if (is_white) {
         r = toupper(r);
     }
     return r;

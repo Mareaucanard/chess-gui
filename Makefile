@@ -25,6 +25,11 @@ DEP 			=	$(OBJ:%.o=%.d)
 
 OBJ 			=	$(SRC:%.cpp=%.o)
 
+TEST_FEN_FILES 	=  	tests/epd_files/4000_openings_legacy.epd \
+					tests/epd_files/new2500.epd \
+ 					tests/epd_files/train-00000-of-00001.epd \
+					tests/edp_files/positions.epd \
+
 $(TARGET): $(OBJ)
 	g++ $(OBJ) -o $(TARGET) $(LDFLAGS)
 	@echo "$(BLUE)Finished compiling with\
@@ -38,8 +43,10 @@ $(TARGET): $(OBJ)
 	&& echo "[$(MAGENTA)compiled$(RESET)] $^ => $@"\
 	|| echo "[$(RED)error$(RESET)]" $^
 
-.PHONY : all clean fclean 
+.PHONY : all clean fclean run_tests
 
+run_tests: $(TARGET)
+	python3 tests/main.py ./$(TARGET) $(TEST_FEN_FILES)
 
 clean:
 	@rm -f $(OBJ)
