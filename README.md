@@ -3,6 +3,7 @@ requires:
 
 c++ compilter with c++23 \
 SFML dev lib \
+Boost lib \
 [Argparse](https://github.com/p-ranav/argparse) \
 A chess engine like [StockFish](https://github.com/official-stockfish/Stockfish/releases/latest) \
 
@@ -23,3 +24,9 @@ I tried to use the `go perft 1` from stockfish but it was quite a bit slower
 
 # Usage
 Usage: Chess GUI [--help] [--version] [--FEN VAR] [--log_FEN] [--pieces VAR] [--board VAR] [--get_moves]
+
+press "P" to generate a PGN file of the current game \
+Left click to select/pick up a piece and move it \
+Right click to make arrows \
+press "R" to reset the board \
+left/right arrow to go back/go forward a move in the game \
